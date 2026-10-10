@@ -18,4 +18,9 @@ public class Invoice
     public string Status { get; set; } = string.Empty;
 
     public Client? Client { get; set; }
+
+    public DateOnly? LastContact { get; set; }
+    public int CommunicationStage { get; set; } = 0;
+
+    public DateOnly? NextContactDate { get; set; }
 }

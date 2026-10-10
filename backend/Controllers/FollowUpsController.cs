@@ -19,6 +19,7 @@ public class FollowUpsController : ControllerBase
         _context = context;
     }
 
+    /*
     [HttpGet("today")]
     public async Task<ActionResult<IEnumerable<FollowUpDTO>>> GetTodaysFollowUps()
     {
@@ -46,9 +47,20 @@ public class FollowUpsController : ControllerBase
             .Select(invoice => new FollowUpDTO
             {
                 Id = invoice.Id,
+
                 ClientName = _context.Clients
                     .Where(client => client.Id == invoice.ClientId)
                     .Select(client => client.Name)
+                    .FirstOrDefault() ?? "",
+
+                ClientEmail = _context.Clients
+                    .Where(client => client.Id == invoice.ClientId)
+                    .Select(client => client.Email)
+                    .FirstOrDefault() ?? "",
+
+                ClientPhone = _context.Clients
+                    .Where(client => client.Id == invoice.ClientId)
+                    .Select(client => client.Phone)
                     .FirstOrDefault() ?? "",
 
                 InvoiceNumber = invoice.InvoiceNumber,
@@ -59,9 +71,55 @@ public class FollowUpsController : ControllerBase
                     ? "Overdue"
                     : "Due Today",
 
-                LastContact = null
+                LastContact = invoice.LastContact
         })
+        
         .ToListAsync();
+
+        return Ok(followUps);
+    }
+    */
+    [HttpGet("today")]
+    public async Task<ActionResult<IEnumerable<FollowUpDTO>>> GetTodaysFollowUps()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var collectorId = int.Parse(userId);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var followUps = await _context.Invoices
+            .Where(invoice =>
+                invoice.Client.CollectorId == collectorId &&
+                invoice.Status != "Paid" &&
+                invoice.DueDate <= today
+            )
+            .Select(invoice => new FollowUpDTO
+            {
+                Id = invoice.Id,
+                ClientName = invoice.Client!.Name,
+                ClientEmail = invoice.Client!.Email,
+                ClientPhone = invoice.Client!.Phone ?? "",
+                InvoiceNumber = invoice.InvoiceNumber,
+                DueDate = invoice.DueDate,
+                Amount = invoice.Amount,
+
+                Status = invoice.DueDate < today
+                    ? "Overdue"
+                    : "Due Today",
+
+                LastContact = invoice.LastContact,
+
+                CommunicationStage = invoice.CommunicationStage,
+
+                NextContactDate = invoice.NextContactDate
+            })
+            .ToListAsync();
 
         return Ok(followUps);
     }

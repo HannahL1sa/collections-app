@@ -8,6 +8,11 @@ public class FollowUpDTO
 
     public string ClientName { get; set; } = string.Empty;
 
+
+    public string ClientEmail { get; set; } = string.Empty;
+    
+    public string ClientPhone { get; set; } = string.Empty;
+
     public string InvoiceNumber { get; set; } = string.Empty;
 
     public DateOnly DueDate { get; set; }
@@ -15,6 +20,9 @@ public class FollowUpDTO
     public decimal Amount { get; set; }
 
     public string Status { get; set; } = string.Empty;
+    public DateOnly? LastContact { get; set; }
 
-    public DateTime? LastContact { get; set; }
+     public int CommunicationStage { get; set; }
+
+     public DateOnly? NextContactDate { get; set; }
 }

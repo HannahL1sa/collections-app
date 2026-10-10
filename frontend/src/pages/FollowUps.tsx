@@ -1,20 +1,130 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
-import { ChatBubbleLeftRightIcon, MagnifyingGlassIcon, CheckCircleIcon} from '@heroicons/react/24/solid';
+import { ChatBubbleLeftRightIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 
 interface FollowUp {
     id: number;
     clientName: string;
+    clientEmail: string;
+    clientPhone: string;
     invoiceNumber: string;
     dueDate: string;
     amount: number;
     status: string;
     lastContact: string | null;
+    communicationStage: number;
+    nextContactDate: string | null;
 }
 
 function FollowUps() {
     const [followUps, setFollowUps] = useState<FollowUp[]>([]);
     const [search, setSearch] = useState("");
+
+    /*
+    const handleSendReminder = async (followUp: FollowUp) => {
+    try {
+        // Tell the backend the invoice was contacted
+        const response = await api.put(
+            `/invoices/${followUp.id}/follow-ups`
+        );
+
+        setFollowUps((prev) =>
+            prev.map((item) =>
+                item.id === followUp.id
+                    ? {
+                          ...item,
+                          lastContact: response.data,
+                      }
+                    : item
+            )
+        );
+        
+        // Then open the email
+        const mailto = `mailto:${followUp.clientEmail}?subject=${encodeURIComponent(
+            `Payment Reminder - ${followUp.clientName}`
+        )}&body=${encodeURIComponent(
+            `Dear ${followUp.clientName},\n\n` +
+            `We hope this message finds you well.\n\n` +
+            `This is a friendly reminder regarding the outstanding payment for the following invoice:\n\n` +
+            `Invoice Number: ${followUp.invoiceNumber}\n` +
+            `Due Date: ${followUp.dueDate}\n` +
+            `Amount Due: $${followUp.amount}\n\n` +
+            `Our records indicate that the above invoice remains outstanding. ` +
+            `We kindly ask that you arrange payment at your earliest convenience.\n\n` +
+            `If payment has already been made, please disregard this reminder. ` +
+            `If you have any questions regarding this invoice or require any assistance, ` +
+            `please feel free to contact us.\n\n` +
+            `Thank you for your prompt attention to this matter.\n\n` +
+            `Kind regards,\n` +
+            `Collections Department`
+        )}`;
+
+        window.location.href = mailto;
+
+    } catch (error) {
+        console.error("Error recording contact:", error);
+    }
+};
+*/
+    const handleSendReminder = async (followUp: FollowUp) => {
+    try {
+        // Record the communication in the database
+        const response = await api.put(
+            `/invoices/${followUp.id}/follow-ups`
+        );
+
+        // Update the row immediately
+        setFollowUps((prev) =>
+            prev.map((item) =>
+                item.id === followUp.id
+                    ? {
+                          ...item,
+                          lastContact: response.data.lastContact,
+                          communicationStage:
+                              response.data.communicationStage,
+                          nextContactDate:
+                              response.data.nextContactDate,
+                      }
+                    : item
+            )
+        );
+
+        // Stage 2 means this is the third communication:
+        // open the client's phone number.
+        if (followUp.communicationStage === 2) {
+            window.location.href = `tel:${followUp.clientPhone}`;
+            return;
+        }
+
+        // Stage 0 and Stage 1 = email reminders
+        const subject = `Payment Reminder - ${followUp.clientName}`;
+
+        const body =
+            `Dear ${followUp.clientName},\n\n` +
+            `We hope this message finds you well.\n\n` +
+            `This is a friendly reminder regarding the outstanding payment for the following invoice:\n\n` +
+            `Invoice Number: ${followUp.invoiceNumber}\n` +
+            `Due Date: ${followUp.dueDate}\n` +
+            `Amount Due: $${followUp.amount}\n\n` +
+            `Our records indicate that the above invoice remains outstanding. ` +
+            `We kindly ask that you arrange payment at your earliest convenience.\n\n` +
+            `If payment has already been made, please disregard this reminder. ` +
+            `If you have any questions regarding this invoice or require any assistance, ` +
+            `please feel free to contact us.\n\n` +
+            `Thank you for your prompt attention to this matter.\n\n` +
+            `Kind regards,\n` +
+            `Collections Department`;
+
+        const mailto =
+            `mailto:${followUp.clientEmail}` +
+            `?subject=${encodeURIComponent(subject)}` +
+            `&body=${encodeURIComponent(body)}`;
+
+        window.location.href = mailto;
+    } catch (error) {
+        console.error("Error recording communication:", error);
+    }
+};
 
     useEffect(() => {
         // We'll connect this to the backend after the UI is working.
@@ -188,28 +298,13 @@ function FollowUps() {
                                 </td>
 
                                 <td className="px-6 py-4">
-
-                                    {followUp.lastContact ? (
-
-                                        <button
-                                            type="button"
-                                            className="inline-flex items-center gap-1 rounded-md bg-green-50 px-3 py-2 text-xs font-medium text-green-700"
-                                        >
-                                            <CheckCircleIcon className="h-4 w-4" />
-                                            Contacted
-                                        </button>
-
-                                    ) : (
-
-                                        <button
-                                            type="button"
-                                            className="rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700"
-                                        >
-                                            Send Reminder
-                                        </button>
-
-                                    )}
-
+                                    <button
+                                        onClick={() => handleSendReminder(followUp)}
+                                        type="button"
+                                        className="rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700"
+                                    >
+                                        Send Reminder
+                                    </button>     
                                 </td>
 
                             </tr>
